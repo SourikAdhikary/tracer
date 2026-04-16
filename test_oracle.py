@@ -47,25 +47,8 @@ for i in range(len(frames)):
         enable_thinking=True,
     )
 
-    # Parse response
-    stripped = re.sub(r'<\|channel\|>thought[\s\S]*?<channel\|>', '', r).strip()
-    stripped = re.sub(r'<turn\|>', '', stripped).strip()
-
-    dets = []
-    try:
-        match = re.search(r'\[[\s\S]*?\]', stripped)
-        if match:
-            data = json.loads(match.group())
-            if isinstance(data, list):
-                for item in data:
-                    if isinstance(item, dict) and "box_2d" in item:
-                        dets.append({
-                            "box_2d": item["box_2d"],
-                            "label": item.get("label", "Oracle"),
-                            "confidence": float(item.get("confidence", 0.8)),
-                        })
-    except (json.JSONDecodeError, ValueError):
-        pass
+    # Use model's fixed parser
+    dets = model._parse_detections(r)
 
     if dets:
         detections_by_frame[i] = dets

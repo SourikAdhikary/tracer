@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+output/*.mp4
+output/*.json
+output/*.md
+output/crops/*.png
+*.egg-info/
+dist/
+build/

@@ -239,17 +239,16 @@ class Gemma4Model:
         return detections
     def _strip_thinking(self, text: str) -> str:
         """Remove thinking blocks and format artifacts from output."""
-        # Remove thinking blocks: <|channel|>thought...<channel|>
-        # (opening has <|channel|>, closing has <channel|>)
-        text = re.sub(r'<\|channel\|>thought[\s\S]*?<channel\|>', '', text)
+        # Remove thinking blocks: <|channel>thought...<channel|> or <|channel|>
+        # Opening tag: <|channel> (one pipe left), closing varies: <channel|> or <|channel|>
+        text = re.sub(r'<\|channel>thought[\s\S]*?(?:<\|channel\|>|<channel\|>)', '', text)
         # Remove code fences
         text = re.sub(r'```json\s*', '', text)
         text = re.sub(r'```\s*', '', text)
         # Remove turn markers
         text = re.sub(r'<turn\|>', '', text)
         # Remove any remaining special tokens
-        text = re.sub(r'<\|[^>]+\|>', '', text)
-        text = re.sub(r'<[^>]+\|>', '', text)
+        text = re.sub(r'<\|?[^>]+\|?>', '', text)
         return text.strip()
 
 
