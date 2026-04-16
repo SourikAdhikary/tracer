@@ -33,7 +33,7 @@ class PipelineConfig:
     scout_confidence_threshold: float = 0.5  # Flag frame if >= this
 
     # Auditor thresholds
-    auditor_confidence_threshold: float = 0.7  # Only keep detections >= this
+    auditor_confidence_threshold: float = 0.5  # Only keep detections >= this
 
     # QoE weights
     qoe_clarity_weight: float = 0.4

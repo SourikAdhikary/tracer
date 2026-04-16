@@ -155,8 +155,13 @@ class Gemma4Model:
                 "Output a JSON array of detections:\n"
                 '[{"box_2d": [y1, x1, y2, x2], "label": "BrandName_Location", "confidence": 0.0-1.0}]\n\n'
                 "Coordinates: 1000x1000 grid, [y1,x1]=top-left, [y2,x2]=bottom-right.\n"
+                "Label format: Brand_Location (e.g., Oracle_Sidepod, Oracle_Helmet, Oracle_Suit)\n\n"
+                "Be thorough — check ALL parts of the image:\n"
+                "- Cars: sidepods, rear wing, nose, engine cover, front wing\n"
+                "- Drivers: helmet, visor, racing suit (chest, shoulders, back)\n"
+                "- Trackside: billboards, barriers, pit wall signage\n\n"
                 "Only include detections with confidence > 0.5.\n"
-                "If no logos are found, output an empty array: []"
+                "If no logos are found, output []."
             )
         response = self.generate(
             prompt=f"Find all instances of: {brand_list}. Describe what you see first, then output the JSON array.",
