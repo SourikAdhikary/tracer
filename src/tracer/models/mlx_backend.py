@@ -220,9 +220,10 @@ class Gemma4Model:
                 if isinstance(data, list):
                     for item in data:
                         if isinstance(item, dict) and "box_2d" in item:
+                            label = str(item.get("label", "Unknown"))[:50]  # Cap label length
                             detections.append({
                                 "box_2d": item["box_2d"],
-                                "label": item.get("label", "Unknown"),
+                                "label": label,
                                 "confidence": float(item.get("confidence", 0.5)),
                             })
                     return detections

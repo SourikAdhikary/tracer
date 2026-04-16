@@ -78,7 +78,7 @@ def crop_all_detections(
         ts_safe = ts.replace(":", "-")
 
         for i, det in enumerate(detections):
-            brand_safe = det.get("label", det.get("brand", "unknown")).replace(" ", "_")
+            brand_safe = det.get("label", det.get("brand", "unknown")).replace(" ", "_")[:30]
             filename = f"{ts_safe}_{brand_safe}_{i}.png"
             output_path = crops_dir / filename
 

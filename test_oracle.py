@@ -27,22 +27,14 @@ model = Gemma4Model("mlx-community/gemma-4-e4b-it-4bit", token_budget=1120)
 model.load()
 
 # Detection prompt that works
-DETECTION_PROMPT = (
-    "Look carefully at this image for the 'Oracle' logo (the Oracle Corporation wordmark). "
-    "It may appear on F1 cars (sidepod, rear wing, nose), signage, or merchandise. "
-    "If Oracle is visible, estimate its position as [y1,x1,y2,x2] on a 1000x1000 grid "
-    "(top-left to bottom-right). Output ONLY a JSON array: "
-    '[{"box_2d": [y1,x1,y2,x2], "label": "Oracle_Location", "confidence": 0.0-1.0}]. '
-    "If Oracle is not visible, output []."
-)
-
+# Use model's built-in improved prompt (no custom override)
 detections_by_frame = {}
 for i in range(len(frames)):
     r = model.generate(
-        prompt="Find the Oracle logo in this image.",
+        prompt=f"Find all instances of: {', '.join(config.brands)}. Describe what you see, then output the JSON array.",
         image=frames[i],
-        system_prompt=DETECTION_PROMPT,
-        max_tokens=300,
+        system_prompt="",  # Use model's default (has thorough checklist)
+        max_tokens=500,
         temperature=0.0,
         enable_thinking=True,
     )
