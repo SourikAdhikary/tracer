@@ -1,0 +1,30 @@
+[project]
+name = "tracer"
+version = "0.1.0"
+description = "Autonomous sponsorship auditor for sports broadcasts using Gemma 4"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = [
+    "mlx>=0.25.0",
+    "mlx-vlm>=0.4.3",
+    "numpy>=1.26",
+    "pillow>=10.0",
+    "opencv-python-headless>=4.9",
+    "rich>=13.0",
+    "pydantic>=2.0",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+hud = ["pygame>=2.5"]
+pdf = ["weasyprint>=62.0"]
+
+[project.scripts]
+tracer = "tracer.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tracer"]
