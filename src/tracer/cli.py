@@ -65,7 +65,7 @@ def main():
 
     # audit command
     audit_parser = subparsers.add_parser("audit", help="Run sponsorship audit on a video")
-    audit_parser.add_argument("--video", required=True, help="Path to video file")
+    audit_parser.add_argument("--video", required=True, help="Path to video file or YouTube URL")
     audit_parser.add_argument("--brands", help='Comma-separated brand names (e.g., "Fly Emirates,Etihad")')
     audit_parser.add_argument("--brands-file", help="Path to text file with brand names (one per line)")
     audit_parser.add_argument("--output", help="Output directory (default: ./output)")

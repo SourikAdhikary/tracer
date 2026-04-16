@@ -18,7 +18,7 @@ from tracer.models.mlx_backend import unload_all
 from tracer.qoe import QoEScorer
 from tracer.report import build_audit_report, save_json_report, save_markdown_report
 from tracer.scout import Scout
-from tracer.video import extract_frames, frame_timestamp
+from tracer.video import extract_frames, frame_timestamp, resolve_video
 
 console = Console()
 
@@ -40,10 +40,15 @@ def run_pipeline(
     """
     if config is None:
         config = Config()
+
+    video_path = str(video_path)
+
+    # Resolve YouTube URLs to local files
+    video_path = str(resolve_video(video_path, config.paths.output_dir))
+
     config.brands = brands
     config.ensure_dirs()
 
-    video_path = str(video_path)
     console.rule("[bold green]Tracer v4 — Sponsorship Audit Pipeline")
     console.print(f"Video: {video_path}")
     console.print(f"Brands: {', '.join(brands)}")

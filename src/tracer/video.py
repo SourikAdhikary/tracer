@@ -1,12 +1,98 @@
 """Video frame extraction via ffmpeg subprocess.
 
+Supports local files and YouTube URLs (via yt-dlp).
 Extracts frames as numpy arrays — no intermediate files written to disk.
 """
 
 import subprocess
+import tempfile
 from pathlib import Path
 
 import numpy as np
+
+
+def is_youtube_url(path: str) -> bool:
+    """Check if the input is a YouTube URL."""
+    return any(domain in path for domain in [
+        "youtube.com/watch",
+        "youtu.be/",
+        "youtube.com/shorts/",
+        "youtube.com/live/",
+    ])
+
+
+def download_youtube(url: str, output_dir: str | Path | None = None) -> Path:
+    """Download a YouTube video to a temp file using yt-dlp.
+
+    Args:
+        url: YouTube URL.
+        output_dir: Optional directory for download. Defaults to system temp.
+
+    Returns:
+        Path to the downloaded video file.
+    """
+    if output_dir is None:
+        output_dir = Path(tempfile.gettempdir())
+    else:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download best quality mp4, cap at 1080p to keep file size sane
+    output_template = str(output_dir / "tracer_yt_%(id)s.%(ext)s")
+
+    cmd = [
+        "yt-dlp",
+        "-f", "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best",
+        "--merge-output-format", "mp4",
+        "-o", output_template,
+        "--no-playlist",
+        url,
+    ]
+
+    print(f"[Tracer] Downloading: {url}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise RuntimeError(f"yt-dlp failed: {result.stderr}")
+
+    # Find the downloaded file (yt-dlp prints the destination)
+    for line in result.stderr.split("\n"):
+        if "[download] Destination:" in line:
+            path = line.split("Destination:")[-1].strip()
+            if Path(path).exists():
+                print(f"[Tracer] Downloaded: {path}")
+                return Path(path)
+        if "has already been downloaded" in line:
+            path = line.split("has already been downloaded")[0].replace("[download]", "").strip()
+            if Path(path).exists():
+                print(f"[Tracer] Already cached: {path}")
+                return Path(path)
+
+    # Fallback: search for the file
+    for f in output_dir.glob("tracer_yt_*.mp4"):
+        print(f"[Tracer] Found downloaded file: {f}")
+        return f
+
+    raise RuntimeError("Could not locate downloaded video file")
+
+
+def resolve_video(input_path: str, output_dir: str | Path | None = None) -> Path:
+    """Resolve a video input — handles both local paths and YouTube URLs.
+
+    Args:
+        input_path: Local file path or YouTube URL.
+        output_dir: Directory for downloaded files (if YouTube).
+
+    Returns:
+        Path to the local video file.
+    """
+    if is_youtube_url(input_path):
+        return download_youtube(input_path, output_dir)
+
+    path = Path(input_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Video not found: {path}")
+    return path
 
 
 def extract_frames(
