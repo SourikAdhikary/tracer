@@ -178,7 +178,7 @@ function render(data) {
   
   allDets.forEach(d => {
     const qoeClass = d.qoe >= 0.7 ? 'high' : d.qoe >= 0.4 ? 'medium' : 'low';
-    const cropPath = d.crop_path ? `../${d.crop_path}` : '';
+    const cropPath = d.crop_path ? `crops/${d.crop_path.split('/').pop()}` : '';
     
     list.innerHTML += `<div class="detection">
       <div class="crop">${cropPath ? `<img src="${cropPath}" alt="${d.brand}" onerror="this.parentElement.innerHTML='<div style=\\'padding:40px;color:#555\\'>No crop</div>'">` : '<div style="padding:40px;color:#555">No crop</div>'}</div>
