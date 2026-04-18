@@ -145,29 +145,35 @@ class Gemma4Model:
         return self._parse_classification(response)
 
     def detect_logos(self, frame: np.ndarray, brands: list[str], system_prompt: str = "") -> list[dict]:
-        """Auditor: detect and localize brand logos."""
+        """Auditor: detect and localize brand logos.
+
+        Uses thinking mode for better reasoning. The <|think|> token in the
+        system prompt is critical for the 26B-A4B model to produce accurate detections.
+        """
         brand_list = ", ".join(brands)
         if not system_prompt:
             system_prompt = (
-                "You are a professional sports broadcast logo detector. "
-                "Locate and identify brand logos with high precision.\n\n"
+                "<|think|>\n"
+                "You are an expert sports broadcast logo auditor. "
+                "Your job is to find brand logos in every frame.\n\n"
                 f"Target brands: {brand_list}\n\n"
-                "Output a JSON array of detections:\n"
-                '[{"box_2d": [y1, x1, y2, x2], "label": "BrandName_Location", "confidence": 0.0-1.0}]\n\n'
-                "Coordinates: 1000x1000 grid, [y1,x1]=top-left, [y2,x2]=bottom-right.\n"
-                "Label format: Brand_Location (e.g., Oracle_Sidepod, Oracle_Helmet, Oracle_Suit)\n\n"
-                "Be thorough — check ALL parts of the image:\n"
-                "- Cars: sidepods, rear wing, nose, engine cover, front wing\n"
-                "- Drivers: helmet, visor, racing suit (chest, shoulders, back)\n"
-                "- Trackside: billboards, barriers, pit wall signage\n\n"
-                "Only include detections with confidence > 0.5.\n"
-                "If no logos are found, output []."
+                "Logos appear on:\n"
+                "- Athlete jerseys, helmets, suits (chest, shoulders, back, sleeves)\n"
+                "- Equipment and vehicles (sides, front, rear)\n"
+                "- Stadium signage, billboards, LED boards, pitch-side ads\n"
+                "- Merchandise and products visible in frame\n\n"
+                "IMPORTANT: Check EVERY part of the frame. Even if the logo is small, "
+                "partially visible, or at an angle, report it. Do NOT skip frames.\n\n"
+                "For each detection output: "
+                '{"box_2d": [y1,x1,y2,x2], "label": "Brand_Location", "confidence": 0.8}\n'
+                "Coordinates on 1000x1000 grid. If no logos are visible, output [].\n"
+                "Always output a JSON array at the end."
             )
         response = self.generate(
-            prompt=f"Find all instances of: {brand_list}. Describe what you see first, then output the JSON array.",
+            prompt=f"Analyze this broadcast frame. Find the {brand_list} logo(s) anywhere.",
             image=frame,
             system_prompt=system_prompt,
-            max_tokens=2048,
+            max_tokens=500,
             temperature=0.0,
             enable_thinking=True,
         )

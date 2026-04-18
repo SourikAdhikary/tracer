@@ -14,8 +14,7 @@ class ModelConfig:
 
     # Auditor model — open-vocab detection (26B-A4B MoE, high quality)
     auditor_model_id: str = "mlx-community/gemma-4-26b-a4b-it-4bit"
-    auditor_token_budget: int = 560  # High res for detection
-    auditor_token_budget_high: int = 1120  # Max res fallback
+    auditor_token_budget: int = 1120  # Max res for detection
 
     # Analyst — reuse Auditor weights, thinking mode for QoE/reports
     # No separate model needed

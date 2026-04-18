@@ -17,7 +17,6 @@ from tracer.crop import crop_all_detections
 from tracer.models.mlx_backend import unload_all
 from tracer.qoe import QoEScorer
 from tracer.report import build_audit_report, save_json_report, save_markdown_report
-from tracer.scout import Scout
 from tracer.video import extract_frames, frame_timestamp, resolve_video
 
 console = Console()
@@ -76,43 +75,9 @@ def run_pipeline(
     console.print()
 
     # ============================================================
-    # PHASE 2: Scout (E4B frame triage)
+    # PHASE 2: Audit (26B-A4B logo detection on ALL frames)
     # ============================================================
-    console.rule("[bold cyan]Phase 2: Scout (E4B Frame Triage)")
-    t0 = time.time()
-
-    scout = Scout(config)
-    scout.load()
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Scanning frames...", total=len(frames))
-
-        def scout_progress(current, total):
-            progress.update(task, completed=current)
-
-        flagged_indices = scout.scan(frames, progress_callback=scout_progress)
-
-    console.print(f"Scout complete: {len(flagged_indices)}/{len(frames)} frames flagged ({time.time()-t0:.1f}s)")
-
-    # Free Scout memory before loading Auditor
-    scout.unload()
-    unload_all()
-    console.print()
-
-    if not flagged_indices:
-        console.print("[yellow]No frames flagged by Scout. No branding detected.")
-        return {"status": "no_detections", "frames_scanned": len(frames)}
-
-    # ============================================================
-    # PHASE 3: Auditor (26B-A4B logo detection)
-    # ============================================================
-    console.rule("[bold cyan]Phase 3: Auditor (26B-A4B Logo Detection)")
+    console.rule("[bold cyan]Phase 2: Audit (26B-A4B Logo Detection)")
     t0 = time.time()
 
     auditor = Auditor(config)
@@ -125,37 +90,42 @@ def run_pipeline(
         TaskProgressColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Auditing flagged frames...", total=len(flagged_indices))
+        task = progress.add_task("Auditing frames...", total=len(frames))
 
-        def auditor_progress(current, total):
+        def audit_progress(current, total):
             progress.update(task, completed=current)
 
         detections_by_frame = auditor.audit_frames(
-            frames, flagged_indices, progress_callback=auditor_progress
+            frames, list(range(len(frames))), progress_callback=audit_progress
         )
 
-    console.print(f"Auditor complete: {len(detections_by_frame)} frames with detections ({time.time()-t0:.1f}s)")
+    total_detections = sum(len(v) for v in detections_by_frame.values())
+    console.print(f"Audit complete: {total_detections} detections in {len(detections_by_frame)} frames ({time.time()-t0:.1f}s)")
+
+    if not detections_by_frame:
+        auditor.unload()
+        unload_all()
+        console.print("[yellow]No detections found.")
+        return {"status": "no_detections", "frames_scanned": len(frames)}
 
     # ============================================================
-    # PHASE 4: QoE Scoring
+    # PHASE 3: QoE Scoring
     # ============================================================
-    console.rule("[bold cyan]Phase 4: QoE Scoring")
+    console.rule("[bold cyan]Phase 3: QoE Scoring")
     t0 = time.time()
 
     scorer = QoEScorer(config)
 
-    total_detections = 0
     for frame_idx, detections in detections_by_frame.items():
         for det in detections:
             scorer.score_detection(frames[frame_idx], det)
-            total_detections += 1
 
     console.print(f"QoE scored: {total_detections} detections ({time.time()-t0:.1f}s)")
 
     # ============================================================
-    # PHASE 5: Crop (PoE Gallery)
+    # PHASE 4: Crop (PoE Gallery)
     # ============================================================
-    console.rule("[bold cyan]Phase 5: Proof of Exposure Crops")
+    console.rule("[bold cyan]Phase 4: Proof of Exposure Crops")
     t0 = time.time()
 
     detections_by_frame = crop_all_detections(
@@ -168,9 +138,9 @@ def run_pipeline(
     console.print(f"Crops saved to {config.paths.crops_dir} ({time.time()-t0:.1f}s)")
 
     # ============================================================
-    # PHASE 6: Reporting
+    # PHASE 5: Reporting
     # ============================================================
-    console.rule("[bold cyan]Phase 6: Report Generation")
+    console.rule("[bold cyan]Phase 5: Report Generation")
     t0 = time.time()
 
     # Build report
@@ -179,7 +149,7 @@ def run_pipeline(
         video_path=video_path,
         duration=duration,
         frames_extracted=len(frames),
-        flagged_indices=flagged_indices,
+        flagged_indices=list(detections_by_frame.keys()),
         detections_by_frame=detections_by_frame,
         frame_timestamps=timestamps,
     )
