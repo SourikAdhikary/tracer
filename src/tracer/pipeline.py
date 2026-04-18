@@ -177,7 +177,6 @@ def run_pipeline(
     console.rule("[bold green]Audit Complete")
     console.print(f"Total detections: {total_detections}")
     console.print(f"Frames scanned: {len(frames)}")
-    console.print(f"Frames flagged: {len(flagged_indices)}")
     console.print(f"Frames with detections: {len(detections_by_frame)}")
     console.print()
 
