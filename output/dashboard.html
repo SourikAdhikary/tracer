@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracer v4 — Audit Results</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; }
+  
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 32px; border-bottom: 1px solid #333; }
+  .header h1 { font-size: 28px; font-weight: 700; color: #fff; }
+  .header .subtitle { color: #888; margin-top: 4px; font-size: 14px; }
+  .header .stats { display: flex; gap: 32px; margin-top: 20px; }
+  .stat { text-align: center; }
+  .stat .value { font-size: 32px; font-weight: 700; color: #4fc3f7; }
+  .stat .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  
+  .brand-summary { display: flex; gap: 16px; padding: 20px 32px; background: #111; border-bottom: 1px solid #222; flex-wrap: wrap; }
+  .brand-card { background: #1a1a2e; border-radius: 12px; padding: 16px 24px; min-width: 200px; border: 1px solid #333; }
+  .brand-card .name { font-size: 18px; font-weight: 600; color: #fff; }
+  .brand-card .metrics { display: flex; gap: 16px; margin-top: 8px; }
+  .brand-card .metric { font-size: 13px; color: #aaa; }
+  .brand-card .metric strong { color: #4fc3f7; }
+  
+  .detections { padding: 32px; }
+  .detections h2 { font-size: 20px; margin-bottom: 20px; color: #fff; }
+  
+  .detection { display: flex; gap: 20px; background: #111; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #222; transition: border-color 0.2s; }
+  .detection:hover { border-color: #4fc3f7; }
+  
+  .detection .crop { width: 280px; min-width: 280px; border-radius: 8px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; }
+  .detection .crop img { width: 100%; height: auto; max-height: 200px; object-fit: contain; }
+  
+  .detection .info { flex: 1; }
+  .detection .timestamp { font-size: 24px; font-weight: 700; color: #4fc3f7; font-variant-numeric: tabular-nums; }
+  .detection .brand { font-size: 16px; color: #fff; margin-top: 4px; }
+  .detection .location { font-size: 13px; color: #888; margin-top: 2px; }
+  
+  .detection .qoe-bar { margin-top: 12px; }
+  .detection .qoe-bar .label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .detection .qoe-bar .bar { height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
+  .detection .qoe-bar .bar .fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .detection .qoe-bar .bar .fill.high { background: #4caf50; }
+  .detection .qoe-bar .bar .fill.medium { background: #ff9800; }
+  .detection .qoe-bar .bar .fill.low { background: #f44336; }
+  
+  .detection .details { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+  .detection .detail { font-size: 12px; }
+  .detection .detail .key { color: #666; }
+  .detection .detail .val { color: #ccc; font-weight: 500; }
+  
+  .heatmap-section { padding: 32px; border-top: 1px solid #222; }
+  .heatmap-section h2 { font-size: 20px; margin-bottom: 16px; color: #fff; }
+  .heatmap-container { position: relative; width: 600px; max-width: 100%; aspect-ratio: 1; background: #111; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
+  .heatmap-container canvas { width: 100%; height: 100%; }
+  
+  .timeline { padding: 32px; border-top: 1px solid #222; }
+  .timeline h2 { font-size: 20px; margin-bottom: 16px; color: #fff; }
+  .timeline-bar { height: 40px; background: #1a1a1a; border-radius: 8px; position: relative; overflow: hidden; }
+  .timeline-marker { position: absolute; top: 0; height: 100%; background: #4fc3f7; opacity: 0.7; border-radius: 4px; min-width: 4px; }
+  
+  .no-data { text-align: center; padding: 60px; color: #666; font-size: 18px; }
+  
+  @media (max-width: 768px) {
+    .detection { flex-direction: column; }
+    .detection .crop { width: 100%; min-width: auto; }
+    .header .stats { flex-wrap: wrap; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Tracer v4 — Audit Results</h1>
+  <div class="subtitle" id="video-source">Loading...</div>
+  <div class="stats">
+    <div class="stat"><div class="value" id="stat-detections">-</div><div class="label">Detections</div></div>
+    <div class="stat"><div class="value" id="stat-frames">-</div><div class="label">Frames Scanned</div></div>
+    <div class="stat"><div class="value" id="stat-duration">-</div><div class="label">Duration</div></div>
+    <div class="stat"><div class="value" id="stat-avg-qoe">-</div><div class="label">Avg QoE</div></div>
+  </div>
+</div>
+
+<div class="brand-summary" id="brand-summary"></div>
+
+<div class="timeline" id="timeline-section">
+  <h2>Timeline</h2>
+  <div class="timeline-bar" id="timeline-bar"></div>
+</div>
+
+<div class="heatmap-section" id="heatmap-section">
+  <h2>Detection Heatmap</h2>
+  <div class="heatmap-container"><canvas id="heatmap-canvas"></canvas></div>
+</div>
+
+<div class="detections">
+  <h2>All Detections</h2>
+  <div id="detections-list"></div>
+</div>
+
+<script>
+// Load the audit JSON — adjust path as needed
+const JSON_URL = 'audit_report.json';
+
+async function loadReport() {
+  try {
+    const resp = await fetch(JSON_URL);
+    const data = await resp.json();
+    render(data);
+  } catch (e) {
+    document.getElementById('detections-list').innerHTML = 
+      `<div class="no-data">Could not load ${JSON_URL}<br><small>${e.message}</small></div>`;
+  }
+}
+
+function render(data) {
+  // Header
+  document.getElementById('video-source').textContent = data.video_source || 'Unknown';
+  document.getElementById('stat-detections').textContent = data.total_detections || 0;
+  document.getElementById('stat-frames').textContent = data.frames_extracted || 0;
+  document.getElementById('stat-duration').textContent = data.duration_seconds ? `${Math.round(data.duration_seconds)}s` : '-';
+  
+  // Collect all detections
+  const allDets = [];
+  (data.results || []).forEach(r => {
+    (r.detections || []).forEach(d => {
+      allDets.push({ ...d, timestamp: r.timestamp, frame_index: r.frame_index });
+    });
+  });
+  
+  // Avg QoE
+  const avgQoe = allDets.length > 0 ? allDets.reduce((s, d) => s + (d.qoe || 0), 0) / allDets.length : 0;
+  document.getElementById('stat-avg-qoe').textContent = avgQoe.toFixed(2);
+  
+  // Brand summary
+  const brands = {};
+  allDets.forEach(d => {
+    const b = d.brand || 'Unknown';
+    if (!brands[b]) brands[b] = { count: 0, totalQoe: 0, topQoe: 0 };
+    brands[b].count++;
+    brands[b].totalQoe += d.qoe || 0;
+    brands[b].topQoe = Math.max(brands[b].topQoe, d.qoe || 0);
+  });
+  
+  const brandSummary = document.getElementById('brand-summary');
+  Object.entries(brands).forEach(([name, s]) => {
+    brandSummary.innerHTML += `<div class="brand-card">
+      <div class="name">${name}</div>
+      <div class="metrics">
+        <div class="metric"><strong>${s.count}</strong> detections</div>
+        <div class="metric">Avg QoE: <strong>${(s.totalQoe/s.count).toFixed(2)}</strong></div>
+        <div class="metric">Peak: <strong>${s.topQoe.toFixed(2)}</strong></div>
+      </div>
+    </div>`;
+  });
+  
+  // Timeline
+  const duration = data.duration_seconds || 60;
+  const timelineBar = document.getElementById('timeline-bar');
+  allDets.forEach(d => {
+    const ts = parseTimestamp(d.timestamp);
+    const pct = (ts / duration) * 100;
+    timelineBar.innerHTML += `<div class="timeline-marker" style="left:${pct}%;width:2%;background:${qoeColor(d.qoe)}"></div>`;
+  });
+  
+  // Heatmap
+  drawHeatmap(allDets);
+  
+  // Detections list (sorted by timestamp)
+  allDets.sort((a, b) => parseTimestamp(a.timestamp) - parseTimestamp(b.timestamp));
+  const list = document.getElementById('detections-list');
+  
+  if (allDets.length === 0) {
+    list.innerHTML = '<div class="no-data">No detections found</div>';
+    return;
+  }
+  
+  allDets.forEach(d => {
+    const qoeClass = d.qoe >= 0.7 ? 'high' : d.qoe >= 0.4 ? 'medium' : 'low';
+    const cropPath = d.crop_path ? `../${d.crop_path}` : '';
+    
+    list.innerHTML += `<div class="detection">
+      <div class="crop">${cropPath ? `<img src="${cropPath}" alt="${d.brand}" onerror="this.parentElement.innerHTML='<div style=\\'padding:40px;color:#555\\'>No crop</div>'">` : '<div style="padding:40px;color:#555">No crop</div>'}</div>
+      <div class="info">
+        <div class="timestamp">${d.timestamp}</div>
+        <div class="brand">${d.brand || 'Unknown'}</div>
+        <div class="location">${d.label || ''}</div>
+        <div class="qoe-bar">
+          <div class="label">Quality of Exposure: ${((d.qoe || 0) * 100).toFixed(0)}%</div>
+          <div class="bar"><div class="fill ${qoeClass}" style="width:${(d.qoe || 0) * 100}%"></div></div>
+        </div>
+        <div class="details">
+          <div class="detail"><span class="key">Clarity:</span> <span class="val">${((d.qoe_clarity || 0) * 100).toFixed(0)}%</span></div>
+          <div class="detail"><span class="key">Size:</span> <span class="val">${((d.qoe_size || 0) * 100).toFixed(0)}%</span></div>
+          <div class="detail"><span class="key">Occlusion:</span> <span class="val">${((d.qoe_occlusion || 0) * 100).toFixed(0)}%</span></div>
+          <div class="detail"><span class="key">Confidence:</span> <span class="val">${((d.confidence || 0) * 100).toFixed(0)}%</span></div>
+        </div>
+        <div class="details">
+          <div class="detail"><span class="key">Box:</span> <span class="val">[${(d.box_2d || []).join(', ')}]</span></div>
+        </div>
+        ${d.valuation_logic ? `<div class="details"><div class="detail" style="max-width:500px"><span class="key">Valuation:</span> <span class="val">${d.valuation_logic}</span></div></div>` : ''}
+      </div>
+    </div>`;
+  });
+}
+
+function parseTimestamp(ts) {
+  if (!ts) return 0;
+  const parts = ts.split(':').map(Number);
+  return parts[0] * 3600 + parts[1] * 60 + parts[2];
+}
+
+function qoeColor(qoe) {
+  if (qoe >= 0.7) return '#4caf50';
+  if (qoe >= 0.4) return '#ff9800';
+  return '#f44336';
+}
+
+function drawHeatmap(dets) {
+  const canvas = document.getElementById('heatmap-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 600;
+  canvas.height = 600;
+  
+  // Dark background
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, 600, 600);
+  
+  if (dets.length === 0) return;
+  
+  // Draw detection boxes with heat
+  dets.forEach(d => {
+    const box = d.box_2d || [0, 0, 100, 100];
+    const [y1, x1, y2, x2] = box.map(v => v * 0.6); // Scale to canvas
+    const alpha = 0.3 + (d.qoe || 0.5) * 0.5;
+    
+    ctx.fillStyle = `rgba(79, 195, 247, ${alpha})`;
+    ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+    
+    ctx.strokeStyle = `rgba(79, 195, 247, 0.8)`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(d.brand || '', x1 + 4, y1 + 14);
+  });
+}
+
+loadReport();
+</script>
+</body>
+</html>

@@ -6,7 +6,11 @@ Usage:
 """
 
 import argparse
+import http.server
+import os
+import socketserver
 import sys
+import webbrowser
 from pathlib import Path
 
 from tracer.config import Config
@@ -52,8 +56,45 @@ def cmd_audit(args: argparse.Namespace) -> None:
 
     if result["status"] == "complete":
         print(f"\nDone. Reports at: {result['json_report']}")
+        print(f"Dashboard: http://localhost:8080/dashboard.html")
+        print(f"Run 'uv run tracer serve' to view.")
     else:
         print(f"\nPipeline ended: {result['status']}")
+
+
+def cmd_serve(args: argparse.Namespace) -> None:
+    """Serve the audit dashboard."""
+    # Resolve output directory
+    if args.output:
+        serve_dir = Path(args.output)
+    else:
+        config = Config()
+        serve_dir = config.paths.output_dir
+
+    if not serve_dir.exists():
+        print(f"Error: output directory not found: {serve_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    # Copy dashboard.html if not present
+    dashboard = serve_dir / "dashboard.html"
+    if not dashboard.exists():
+        import shutil
+        template = Path(__file__).parent.parent.parent / "output" / "dashboard.html"
+        if template.exists():
+            shutil.copy2(template, dashboard)
+            print(f"Copied dashboard to {dashboard}")
+
+    port = args.port
+    os.chdir(serve_dir)
+
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        url = f"http://localhost:{port}/dashboard.html"
+        print(f"Serving dashboard at {url}")
+        print(f"Serving from: {serve_dir}")
+        print("Press Ctrl+C to stop.")
+        webbrowser.open(url)
+        httpd.serve_forever()
 
 
 def main():
@@ -73,6 +114,12 @@ def main():
     audit_parser.add_argument("--token-budget", type=int, choices=[70, 140, 280, 560, 1120],
                               help="Auditor vision token budget (default: 560)")
     audit_parser.set_defaults(func=cmd_audit)
+
+    # serve command
+    serve_parser = subparsers.add_parser("serve", help="Launch the audit dashboard")
+    serve_parser.add_argument("--port", type=int, default=8080, help="Port to serve on (default: 8080)")
+    serve_parser.add_argument("--output", help="Output directory to serve (default: ./output)")
+    serve_parser.set_defaults(func=cmd_serve)
 
     args = parser.parse_args()
 
