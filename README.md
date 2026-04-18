@@ -270,3 +270,7 @@ Developed in a single session with an AI agent (Hermes). Key decisions:
 ## License
 
 Apache 2.0 (Gemma 4 model license)
+
+---
+
+Made with ❤️ by [Sourik](https://github.com/sourikadhikary)
