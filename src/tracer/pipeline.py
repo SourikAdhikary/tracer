@@ -187,5 +187,5 @@ def run_pipeline(
         "crops_dir": str(config.paths.crops_dir),
         "total_detections": total_detections,
         "frames_scanned": len(frames),
-        "frames_flagged": len(flagged_indices),
+        "frames_with_detections": len(detections_by_frame),
     }
