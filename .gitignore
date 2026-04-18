@@ -1,10 +1,16 @@
 __pycache__/
 *.pyc
 .venv/
+*.egg-info/
+dist/
+build/
+
+# Generated outputs (per-run, not source code)
 output/*.mp4
 output/*.json
 output/*.md
 output/crops/*.png
-*.egg-info/
-dist/
-build/
+output/aws_run/
+
+# Keep dashboard.html (it's source code)
+!output/dashboard.html
